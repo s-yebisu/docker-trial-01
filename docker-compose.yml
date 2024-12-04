@@ -1,0 +1,126 @@
+version: '3.9'
+services:
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - wordpress
+      - springboot
+      - nuxt
+
+  wordpress:
+    build:
+      context: ./wordpress
+    container_name: wordpress
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - ./wordpress/wp-content:/var/www/html/wp-content
+    depends_on:
+      - db
+
+  db:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+    volumes:
+      - db_data:/var/lib/mysql
+
+  phpmyadmin:
+    image: phpmyadmin
+    depends_on:
+      - db
+    environment:
+      - PMA_ARBITRARY=1
+      - PMA_HOSTS=db
+      - PMA_USER=root
+      - PMA_PASSWORD=root
+    ports:
+      - "3001:80"
+
+
+  springboot:
+    image: eclipse-temurin:17-jre  # Java 17ランタイム
+    container_name: springboot
+    volumes:
+      - ./springboot/app.jar:/app/app.jar
+    command: ["java", "-jar", "/app/app.jar"]
+    ports:
+     - "8080:8080"
+#    depends_on:
+#      - db
+
+  nuxt:
+    container_name: nuxt
+    build: nuxt
+    volumes:
+      - ./front:/app:cached
+      - nuxt_node_modules:/app/node_modules
+    ports:
+      - "3000:3000"
+      - "24678:24678"
+    tty: true
+    environment:
+      - HOST=0.0.0.0
+      - port=3000
+      - CHOKIDAR_USEPOLLING=true
+#    command: sh -c "yarn && yarn dev"
+
+#  front:
+#    build:
+#      context: ./front
+#      dockerfile: Dockerfile
+#    ports:
+#      - 3000:3000
+#      - 24678:24678 #ホットリロード用のポート番号
+#    volumes:
+#      - ./front/src/:/src
+#      - node_modules:/src/node_modules
+#    tty: true
+#    restart: always
+#    #command: npm run dev ※初回はコメントアウト
+#    #command: npm run dev
+#    environment:
+#      - HOST=0.0.0.0
+#      - PORT=3000
+#      - CHOKIDAR_USEPOLLING=true
+
+##  nuxt:
+##    image: node:18
+##    container_name: nuxt
+##    volumes:
+##      - ./nuxt/app:/app:cached
+##      - nuxt_node_modules:/app/node_modules
+##    command: ["npm", "run", "dev"]
+##    ports:
+##      - "3000:3000"
+##    tty: true
+##    environment:
+##      - HOST=0.0.0.0
+##      - port=3000
+##      - CHOKIDAR_USEPOLLING=true
+##
+###  nuxt:
+###    image: node:18
+###    container_name: nuxt
+###    working_dir: /app
+###    volumes:
+###      - ./nuxt/app:/app
+###    command: ["npm", "run", "dev"]
+###    ports:
+###      - "3000:3000"
+
+volumes:
+  db_data:
+  nuxt_node_modules:
